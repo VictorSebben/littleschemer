@@ -1,6 +1,6 @@
 ;; The Law of Bolacha
 ;; -> Bolacha is always a number
-(define bolacha 5)
+(define *bolacha* 5)
 
 ;; The First Commandment
 ;; -> When recurring on a list of atoms, lat, ask two questions
@@ -42,6 +42,14 @@
 
 ;; The Sixth Commandment
 ;; Simplify only after the function is correct.
+
+;; The Seventh Commandment
+;; Recur on the subparts that are of the same nature:
+;; - On the sublists of a list.
+;; - On the subexpressions of an arithmetic expression.
+
+;; The Eighth Commandment
+;; Use help function to abstract from representations.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; The proof of the pudding is in the eating. ;;
@@ -449,3 +457,85 @@
       ((equal? (car l) s) (cdr l))
       (else (cons (car l)
                   (rember s (cdr l)))))))
+
+;; (define numbered?
+;;   (lambda (a)
+;;     (cond
+;;      ((null? a) #t)
+;;      ((list? (car a)) (and (numbered? (car a)) (numbered? (cdr a))))
+;;      ((and (number? (car a)) (numbered? (cdr a))))
+;;      ((and (member? (car a) (quote (+ * ^))) (numbered? (cdr a))))
+;;      (else #f))))
+
+(define numbered?
+  (lambda (aexp)
+    (cond
+     ((atom? aexp) (number? aexp))
+     (else
+      (and (numbered? (car aexp)) (numbered? (car (cdr (cdr aexp))))
+           (member? (car (cdr aexp)) (quote (+ * ^))))))))
+
+;; (define value
+;;   (lambda (nexp)
+;;     (cond
+;;      ((atom? nexp)
+;;       (cond ((number? nexp) nexp) (else #f)))
+;;      ((eq? (car (cdr nexp)) (quote +))
+;;       (+ (value (car nexp)) (value (car (cdr (cdr nexp))))))
+;;      ((eq? (car (cdr nexp)) (quote *))
+;;       (* (value (car nexp)) (value (car (cdr (cdr nexp))))))
+;;      ((eq? (car (cdr nexp)) (quote ^))
+;;       (pow (value (car nexp)) (value (car (cdr (cdr nexp))))))
+;;      (else #f))))
+
+(define value
+  (lambda (nexp)
+    (cond
+     ((atom? nexp)
+      (cond ((number? nexp) nexp) (else #f)))
+     ((eq? (operator nexp) (quote +))
+      (+ (value (1st-sub-exp nexp)) (value (2nd-sub-exp nexp))))
+     ((eq? (operator nexp) (quote *))
+      (* (value (1st-sub-exp nexp)) (value (2nd-sub-exp nexp))))
+     ((eq? (operator nexp) (quote ^))
+      (pow (value (1st-sub-exp nexp)) (value (2nd-sub-exp nexp))))
+     (else #f))))
+
+(define 1st-sub-exp
+  (lambda (nexp)
+    (car nexp)))
+
+(define 2nd-sub-exp
+  (lambda (nexp)
+    (car (cdr (cdr nexp)))))
+
+(define operator
+  (lambda (nexp)
+    (car (cdr nexp))))
+
+(define crazy-zero?
+  (lambda (cn)
+    (null? cn)))
+
+(define crazy-add1
+  (lambda (cn)
+    (cons (quote ()) cn)))
+
+(define crazy-sub1
+  (lambda (cn)
+    (cdr cn)))
+
+(define crazy+
+  (lambda (cn1 cn2)
+    (cond
+     ((crazy-zero? cn2) cn1)
+     (else (crazy+ (crazy-add1 cn1) (crazy-sub1 cn2))))))
+
+(define crazy-lat?
+  (lambda (l)
+    (cond
+     ((null? l) #t)
+     ((empty? (car l)) (crazy-lat? (cdr l)))
+     (else #f))))
+
+;; ((()) (() ()) (() () ())) => (1 2 3) in crazy-numeric notation
